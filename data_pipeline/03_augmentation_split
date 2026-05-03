@@ -1,0 +1,228 @@
+# =============================================================
+# Augmentation and Train/Val/Test Split
+# Pokemon Image Classifier — Data Pipeline
+#
+# USAGE: Run as a standalone script after stray_pixel_removal.py
+#        python augmentation_split.py
+#
+# PURPOSE: Splits cleaned images into train/val/test sets and
+#          applies two augmentation pipelines to training data.
+#          Produces two dataset versions: 5-aug and 10-aug.
+#
+# REQUIREMENTS: pip install Pillow numpy torch torchvision
+# =============================================================
+
+import numpy as np
+import shutil
+from pathlib import Path
+from PIL import Image
+from sklearn.model_selection import train_test_split
+from torchvision import transforms
+from torchvision.transforms import functional as TF
+
+# =============================================================
+# CONFIG — update this path before running
+# =============================================================
+FINAL_ROOT  = Path(r"G:\My Drive\Machine Learning Group Project\Final Images")
+OUTPUT_ROOT = Path(r"G:\My Drive\Machine Learning Group Project")
+
+# Pokédex range (Gen 1 only)
+POKEDEX_START = "001"
+POKEDEX_END   = "151"
+
+# Dataset settings
+REQUIRED     = 40
+IMG_SIZE     = (64, 64)
+RANDOM_STATE = 1996
+IMAGE_EXTS   = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+
+# =============================================================
+# SECTION 1 — Augmentation Pipelines
+# =============================================================
+
+# 5-Aug pipeline — moderate augmentation
+augment_standard = transforms.Compose([
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomRotation(degrees=15),
+    transforms.ColorJitter(
+        brightness=0.3, contrast=0.3,
+        saturation=0.3, hue=0.1
+    ),
+    transforms.RandomResizedCrop(size=64, scale=(0.8, 1.0)),
+])
+
+augment_grayscale = transforms.Compose([
+    transforms.RandomGrayscale(p=1.0),
+    transforms.Lambda(lambda img: img.convert("RGB")),
+])
+
+# 10-Aug pipeline — advanced augmentation
+augment_standard_10 = transforms.Compose([
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomRotation(degrees=15),
+    transforms.ColorJitter(
+        brightness=0.3, contrast=0.3,
+        saturation=0.3, hue=0.1
+    ),
+    transforms.RandomResizedCrop(size=64, scale=(0.8, 1.0)),
+    transforms.RandomPerspective(distortion_scale=0.2, p=0.5),
+    transforms.GaussianBlur(kernel_size=3),
+    transforms.RandomPosterize(bits=4, p=0.5),
+])
+
+augment_rotate180 = transforms.Compose([
+    transforms.Lambda(lambda img: TF.rotate(img, 180)),
+])
+
+augment_invert = transforms.Compose([
+    transforms.RandomInvert(p=1.0),
+])
+
+# =============================================================
+# SECTION 2 — Image Helpers
+# =============================================================
+def load_image_rgb(path: Path) -> Image.Image:
+    """Load image and convert to RGB (drops alpha for augmentation)."""
+    img = Image.open(path).convert("RGBA")
+    background = Image.new("RGB", img.size, (255, 255, 255))
+    background.paste(img, mask=img.split()[3])
+    return background.resize(IMG_SIZE, Image.LANCZOS)
+
+
+def image_to_array(img: Image.Image) -> np.ndarray:
+    """Convert PIL image to normalized float32 numpy array."""
+    return np.array(img).astype(np.float32) / 255.0
+
+
+# =============================================================
+# SECTION 3 — Dataset Builder
+# =============================================================
+def build_dataset(aug_version: str):
+    """
+    Build train/val/test arrays for a given augmentation version.
+    aug_version: '5aug' or '10aug'
+    """
+    print(f"\n{'='*50}")
+    print(f"Building dataset: {aug_version}")
+    print(f"{'='*50}")
+
+    X_train_list, y_train_list = [], []
+    X_val_list,   y_val_list   = [], []
+    X_test_list,  y_test_list  = [], []
+
+    skipped = 0
+
+    for folder in sorted(FINAL_ROOT.iterdir()):
+        if not folder.is_dir():
+            continue
+
+        folder_id = folder.name.split(" - ")[0].strip()
+        if not (POKEDEX_START <= folder_id <= POKEDEX_END):
+            continue
+
+        # Collect images
+        images = sorted([
+            p for p in folder.iterdir()
+            if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+        ])
+
+        if len(images) != REQUIRED:
+            print(f"  ⚠ Skipping {folder.name} "
+                  f"({len(images)} images, expected {REQUIRED})")
+            skipped += 1
+            continue
+
+        label = folder.name
+
+        # 60/20/20 stratified split
+        train_imgs, temp_imgs = train_test_split(
+            images, test_size=0.4,
+            random_state=RANDOM_STATE
+        )
+        val_imgs, test_imgs = train_test_split(
+            temp_imgs, test_size=0.5,
+            random_state=RANDOM_STATE
+        )
+
+        # ── Val and Test — no augmentation ───────────────────
+        for img_path in val_imgs:
+            img = load_image_rgb(img_path)
+            X_val_list.append(image_to_array(img).flatten())
+            y_val_list.append(label)
+
+        for img_path in test_imgs:
+            img = load_image_rgb(img_path)
+            X_test_list.append(image_to_array(img).flatten())
+            y_test_list.append(label)
+
+        # ── Train — with augmentation ─────────────────────────
+        for img_path in train_imgs:
+            img = load_image_rgb(img_path)
+            # Always include original
+            X_train_list.append(image_to_array(img).flatten())
+            y_train_list.append(label)
+
+            if aug_version == "5aug":
+                # 4 standard augmentations
+                for _ in range(4):
+                    aug = augment_standard(img)
+                    X_train_list.append(image_to_array(aug).flatten())
+                    y_train_list.append(label)
+                # 1 guaranteed grayscale
+                aug = augment_grayscale(img)
+                X_train_list.append(image_to_array(aug).flatten())
+                y_train_list.append(label)
+
+            elif aug_version == "10aug":
+                # 7 standard augmentations
+                for _ in range(7):
+                    aug = augment_standard_10(img)
+                    X_train_list.append(image_to_array(aug).flatten())
+                    y_train_list.append(label)
+                # 1 guaranteed 180° rotation
+                aug = augment_rotate180(img)
+                X_train_list.append(image_to_array(aug).flatten())
+                y_train_list.append(label)
+                # 1 guaranteed grayscale
+                aug = augment_grayscale(img)
+                X_train_list.append(image_to_array(aug).flatten())
+                y_train_list.append(label)
+                # 1 guaranteed invert
+                aug = augment_invert(img)
+                X_train_list.append(image_to_array(aug).flatten())
+                y_train_list.append(label)
+
+    # ── Convert to arrays ─────────────────────────────────────
+    X_train = np.array(X_train_list, dtype=np.float32)
+    X_val   = np.array(X_val_list,   dtype=np.float32)
+    X_test  = np.array(X_test_list,  dtype=np.float32)
+    y_train = np.array(y_train_list)
+    y_val   = np.array(y_val_list)
+    y_test  = np.array(y_test_list)
+
+    print(f"\n  Train: {X_train.shape} | "
+          f"Val: {X_val.shape} | "
+          f"Test: {X_test.shape}")
+    print(f"  Skipped folders: {skipped}")
+
+    # ── Save arrays ───────────────────────────────────────────
+    np.save(OUTPUT_ROOT / f"X_train_{aug_version}.npy", X_train)
+    np.save(OUTPUT_ROOT / f"X_val_{aug_version}.npy",   X_val)
+    np.save(OUTPUT_ROOT / f"X_test_{aug_version}.npy",  X_test)
+    np.save(OUTPUT_ROOT / f"y_train_{aug_version}.npy", y_train)
+    np.save(OUTPUT_ROOT / f"y_val_{aug_version}.npy",   y_val)
+    np.save(OUTPUT_ROOT / f"y_test_{aug_version}.npy",  y_test)
+
+    print(f"  ✅ Saved {aug_version} arrays to {OUTPUT_ROOT}")
+
+
+# =============================================================
+# SECTION 4 — Entry Point
+# =============================================================
+if __name__ == "__main__":
+    np.random.seed(RANDOM_STATE)
+
+    build_dataset("5aug")   # ~5 min
+    build_dataset("10aug")  # ~10 min
+
+    print("\n✅ Both datasets complete!")
