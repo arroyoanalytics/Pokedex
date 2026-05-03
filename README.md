@@ -4,21 +4,21 @@ A multi-class image classification project identifying all 151 Generation 1 Pok�
 across multiple art styles using Random Forest, Neural Network, and CNN models.
 
 ## Project Overview
-This project was completed as part of CAP5610 Machine Learning at Florida International University.
+This project was completed as part of CAP5610 Machine Learning at University of Central Florida.
 The goal was to build and compare three machine learning models capable of identifying 
 Pokémon from images spanning anime screenshots, Trading Card art, in-game models, and merchandise.
 
 ## Dataset
 - 34,000+ raw images scraped from Bulbagarden
-- 6,040 final images — 40 per Pokémon across 151 classes
+- 6,040 final images (40 per Pokémon across 151 classes)
 - Available on Kaggle: [Pokémon Image Classifier Dataset](https://www.kaggle.com/datasets/nyahssp/pokmon-image-classifier-dataset-cleaned)
 
 ## Pipeline
-1. **Web scraping** — images pulled from Bulbagarden archive
-2. **Manual cleaning** — custom tkinter GUI with background removal, magic wand, and brush tools
-3. **Preprocessing** — background removal, stray pixel cleanup, 256×256 resizing
-4. **Augmentation** — two pipelines (5-aug and 10-aug) applied to training set only
-5. **Modeling** — Random Forest (HOG), Neural Network (MLP), CNN
+1. **Web scraping**: images pulled from Bulbagarden archive
+2. **Manual cleaning**: custom tkinter GUI with background removal, magic wand, and brush tools
+3. **Preprocessing**: background removal, stray pixel cleanup, 256×256 resizing
+4. **Augmentation**: two pipelines (5-aug and 10-aug) applied to training set only
+5. **Modeling**: Random Forest (HOG), Neural Network (MLP), CNN
 
 ## Results
 
@@ -59,4 +59,4 @@ pokemon-image-classifier/
 
 ## Course
 
-CAP5610 Machine Learning — University of Central Florida, Spring 2026
+CAP5610 Machine Learning. University of Central Florida, Spring 2026
