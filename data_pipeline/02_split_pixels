@@ -1,0 +1,160 @@
+# =============================================================
+# Stray Pixel Removal
+# Pokemon Image Classifier — Data Pipeline
+#
+# USAGE: Run as a standalone script after cleaning_gui.py
+#        python stray_pixel_removal.py
+#
+# PURPOSE: Removes isolated stray pixels leftover after
+#          background removal using connected component analysis.
+#
+# REQUIREMENTS: pip install Pillow numpy scipy
+# =============================================================
+
+import numpy as np
+from pathlib import Path
+from PIL import Image
+from scipy.ndimage import label
+
+# =============================================================
+# CONFIG — update this path before running
+# =============================================================
+PROCESSED_ROOT = Path(r"G:\My Drive\Machine Learning Group Project\Processed Images")
+FINAL_ROOT     = Path(r"G:\My Drive\Machine Learning Group Project\Final Images")
+
+# Pokédex range (Gen 1 only)
+POKEDEX_START = "001"
+POKEDEX_END   = "151"
+
+# Stray pixel settings
+MIN_COMPONENT_SIZE = 50   # components smaller than this are removed
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+
+# =============================================================
+# SECTION 1 — Stray Pixel Removal Helper
+# =============================================================
+def remove_stray_pixels(img: Image.Image,
+                        min_size: int = MIN_COMPONENT_SIZE) -> Image.Image:
+    """
+    Remove isolated pixel clusters smaller than min_size using
+    connected component analysis on the alpha channel.
+    """
+    img = img.convert("RGBA")
+    arr = np.array(img)
+
+    # Binary mask — True where pixel is visible (alpha > 0)
+    alpha_mask = arr[:, :, 3] > 0
+
+    # Label connected components
+    labeled, num_features = label(alpha_mask)
+
+    # Zero out small components
+    for component_id in range(1, num_features + 1):
+        component_mask = labeled == component_id
+        if component_mask.sum() < min_size:
+            arr[component_mask, 3] = 0
+
+    return Image.fromarray(arr)
+
+
+# =============================================================
+# SECTION 2 — Main Processing Loop
+# =============================================================
+def should_skip(folder_name: str) -> bool:
+    """
+    Skip folders that are already in Final Images or already split
+    into Train/Val/Test subfolders.
+    """
+    final_dir = FINAL_ROOT / folder_name
+    if not final_dir.exists():
+        return False
+
+    # Skip if already has 40 images in Final Images
+    image_count = sum(
+        1 for p in final_dir.iterdir()
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+    )
+    if image_count >= 40:
+        return True
+
+    # Skip if already split into Train/Val/Test
+    split_folders = {"Train", "Val", "Test"}
+    subdirs = {p.name for p in final_dir.iterdir() if p.is_dir()}
+    if split_folders.issubset(subdirs):
+        return True
+
+    return False
+
+
+def process_folder(folder: Path) -> tuple[int, int]:
+    """
+    Process all images in a Processed Images folder and save
+    cleaned versions to Final Images. Returns (saved, skipped).
+    """
+    folder_name = folder.name
+    out_dir     = FINAL_ROOT / folder_name
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    saved   = 0
+    skipped = 0
+
+    for img_path in sorted(folder.iterdir()):
+        if not img_path.is_file():
+            continue
+        if img_path.suffix.lower() not in IMAGE_EXTS:
+            continue
+
+        out_path = out_dir / img_path.name
+        if out_path.exists():
+            skipped += 1
+            continue
+
+        try:
+            img     = Image.open(img_path).convert("RGBA")
+            cleaned = remove_stray_pixels(img)
+            cleaned.save(out_path, "PNG")
+            saved += 1
+        except Exception as e:
+            print(f"  ❌ Error processing {img_path.name}: {e}")
+
+    return saved, skipped
+
+
+def main():
+    print("=" * 50)
+    print("Stray Pixel Removal")
+    print("=" * 50)
+
+    total_saved   = 0
+    total_skipped = 0
+    total_folders = 0
+
+    for folder in sorted(PROCESSED_ROOT.iterdir()):
+        if not folder.is_dir():
+            continue
+
+        folder_id = folder.name.split(" - ")[0].strip()
+        if not (POKEDEX_START <= folder_id <= POKEDEX_END):
+            continue
+
+        if should_skip(folder.name):
+            print(f"  ✓ Skipping {folder.name} (already complete)")
+            continue
+
+        print(f"  Processing {folder.name}...")
+        saved, skipped = process_folder(folder)
+        print(f"    Saved: {saved} | Skipped (already exists): {skipped}")
+
+        total_saved   += saved
+        total_skipped += skipped
+        total_folders += 1
+
+    print("\n" + "=" * 50)
+    print(f"Complete! Folders processed: {total_folders}")
+    print(f"Total images saved:   {total_saved:,}")
+    print(f"Total images skipped: {total_skipped:,}")
+    print("=" * 50)
+
+
+if __name__ == "__main__":
+    main()
