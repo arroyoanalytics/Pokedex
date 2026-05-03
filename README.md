@@ -24,11 +24,12 @@ Pokémon from images spanning anime screenshots, Trading Card art, in-game model
 
 | Model | Test Accuracy | Macro F1 | ROC-AUC |
 |---|---|---|---|
-| Random Forest (HOG) | 24.01% | 0.23 | 0.76 |
-| Neural Network (5-Aug) | 30.79% | 0.30 | 0.93 |
-| Neural Network (10-Aug) | 26.49% | 0.25 | 0.93 |
-| CNN (5-Aug) | 57.95% | 0.58 | 0.97 |
-| CNN (10-Aug) | 61.92% | 0.62 | 0.97 |
+| Random Forest (5-Aug) | 29.14% | 0.27 | 0.80 |
+| Random Forest (10-Aug) | 30.13% | 0.28 | 0.81 |
+| Neural Network (5-Aug) | 38.08% | 0.38 | 0.94 |
+| Neural Network (10-Aug) | 38.74% | 0.38 | 0.95 |
+| CNN (5-Aug) | 65.23% | 0.65 | 0.99 |
+| CNN (10-Aug) | 67.22% | 0.67 | 0.99 |
 
 ## Project Structure
 
