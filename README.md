@@ -33,14 +33,14 @@ Pokémon from images spanning anime screenshots, Trading Card art, in-game model
 ## Project Structure
 
 pokemon-image-classifier/
-  README.md
-  requirements.txt
-  data_pipeline/
-    cleaning_gui.py       # Standalone tkinter image cleaning tool
-  notebooks/
-    pokemon_classifier.ipynb  # Full modeling pipeline
-  assets/
-    sample_images/        # Example cleaned images
+  - README.md
+  - requirements.txt
+  - data_pipeline/
+    - cleaning_gui.py       # Standalone tkinter image cleaning tool
+  - notebooks/
+    - pokemon_classifier.ipynb  # Full modeling pipeline
+  - assets/
+      - sample_images/        # Example cleaned images
 
 ## Setup
 
