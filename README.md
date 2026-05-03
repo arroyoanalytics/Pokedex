@@ -52,10 +52,10 @@ pokemon-image-classifier/
 
 ## Team
 
-- Alejandro Arroyo — Data pipeline, manual cleaning, preprocessing
-- Nyah Posey — Neural Network model
-- Jessica Wentworth — EDA, Random Forest
-- Vivi Lazo — CNN model
+- Alejandro Arroyo: Data pipeline, manual cleaning, preprocessing
+- Nyah Posey: Neural Network model
+- Jessica Wentworth: EDA, Random Forest
+- Vivi Lazo: CNN model
 
 ## Course
 
