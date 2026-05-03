@@ -36,11 +36,11 @@ pokemon-image-classifier/
   - README.md
   - requirements.txt
   - data_pipeline/
-    - cleaning_gui.py       # Standalone tkinter image cleaning tool
+    - cleaning_gui.py  (Standalone tkinter image cleaning tool)
   - notebooks/
-    - pokemon_classifier.ipynb  # Full modeling pipeline
+    - pokemon_classifier.ipynb  (Full modeling pipeline)
   - assets/
-      - sample_images/        # Example cleaned images
+      - sample_images/  (Example cleaned images)
 
 ## Setup
 
